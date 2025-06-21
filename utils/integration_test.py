@@ -9,13 +9,27 @@
 - Отладки HTTP запросов
 
 Требует запущенный сервер на http://localhost:8000
-
-Для полного тестирования используйте: pytest tests/
 """
 
 import hashlib
+import os
+import sys
 import time
 from decimal import Decimal
+from pathlib import Path
+
+# Настройка путей для корректной работы в PyCharm и других IDE
+current_file_path = Path(__file__).resolve()
+project_root = current_file_path.parent.parent
+os.chdir(project_root)
+
+# Добавляем корень проекта в PYTHONPATH если его там нет
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+print(f"🔧 Рабочая директория: {os.getcwd()}")
+print(f"🔧 Корень проекта: {project_root}")
+print(f"🐍 Python интерпретатор: {sys.executable}")
 
 import requests
 
@@ -71,7 +85,7 @@ def print_summary(passed, total):
         print(f"{Colors.RED}❌ ПРОВАЛЕНО: {total-passed}/{total}{Colors.END}")
 
 
-def test_user_auth():
+def check_user_auth():
     """Тестирование авторизации пользователя"""
     print_header("АВТОРИЗАЦИЯ ПОЛЬЗОВАТЕЛЯ")
 
@@ -106,7 +120,7 @@ def test_user_auth():
         return None, False
 
 
-def test_admin_auth():
+def check_admin_auth():
     """Тестирование авторизации администратора"""
     print_header("АВТОРИЗАЦИЯ АДМИНИСТРАТОРА")
 
@@ -141,7 +155,7 @@ def test_admin_auth():
         return None, False
 
 
-def test_user_endpoints(token):
+def check_user_endpoints(token):
     """Тестирование эндпоинтов пользователя"""
     print_header("ПОЛЬЗОВАТЕЛЬСКИЕ API")
     headers = {"Authorization": f"Bearer {token}"}
@@ -222,7 +236,7 @@ def test_user_endpoints(token):
     return passed, total
 
 
-def test_admin_endpoints(token):
+def check_admin_endpoints(token):
     """Тестирование эндпоинтов администратора"""
     print_header("АДМИНИСТРАТИВНЫЕ API")
     headers = {"Authorization": f"Bearer {token}"}
@@ -291,7 +305,7 @@ def generate_signature(
     return hashlib.sha256(data_string.encode()).hexdigest()
 
 
-def test_webhook():
+def check_webhook():
     """Тестирование вебхука"""
     print_header("СИСТЕМА ПЛАТЕЖЕЙ (ВЕБХУКИ)")
     passed = 0
@@ -390,7 +404,7 @@ def test_webhook():
     return passed, total
 
 
-def test_admin_user_management(token):
+def check_admin_user_management(token):
     """Тестирование управления пользователями"""
     print_header("УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ")
     headers = {"Authorization": f"Bearer {token}"}
@@ -506,15 +520,26 @@ def main():
         print(
             f"{Colors.RED}❌ Сервер недоступен. Убедитесь, что приложение запущено.{Colors.END}"
         )
-        print(f"{Colors.YELLOW}💡 Запустите сервер: python -m app.main{Colors.END}")
+        print(
+            f"{Colors.YELLOW}💡 Из терминала запустите: python3 -m app.main{Colors.END}"
+        )
+        print(
+            f"{Colors.YELLOW}💡 Или из PyCharm: запустите app/main.py напрямую{Colors.END}"
+        )
+        print(
+            f"{Colors.CYAN}🔗 Сервер должен быть доступен по адресу: {BASE_URL}{Colors.END}"
+        )
         return
     except Exception as e:
         print(f"{Colors.RED}❌ Ошибка подключения: {str(e)}{Colors.END}")
+        print(
+            f"{Colors.YELLOW}💡 Проверьте, что сервер запущен на порту 8000{Colors.END}"
+        )
         return
 
     # Тестирование авторизации
-    user_token, user_auth_success = test_user_auth()
-    admin_token, admin_auth_success = test_admin_auth()
+    user_token, user_auth_success = check_user_auth()
+    admin_token, admin_auth_success = check_admin_auth()
 
     total_tests += 2
     if user_auth_success:
@@ -524,22 +549,22 @@ def main():
 
     # Тестирование пользовательских эндпоинтов
     if user_token:
-        passed, total = test_user_endpoints(user_token)
+        passed, total = check_user_endpoints(user_token)
         total_passed += passed
         total_tests += total
 
     # Тестирование административных эндпоинтов
     if admin_token:
-        passed, total = test_admin_endpoints(admin_token)
+        passed, total = check_admin_endpoints(admin_token)
         total_passed += passed
         total_tests += total
 
-        passed, total = test_admin_user_management(admin_token)
+        passed, total = check_admin_user_management(admin_token)
         total_passed += passed
         total_tests += total
 
     # Тестирование вебхука
-    passed, total = test_webhook()
+    passed, total = check_webhook()
     total_passed += passed
     total_tests += total
 
