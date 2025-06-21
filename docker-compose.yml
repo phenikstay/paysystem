@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: paysystem
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:password@db:5432/paysystem
+      - JWT_SECRET=your-secret-key-change-in-production
+      - WEBHOOK_SECRET_KEY=gfdmhghif38yrf9ew0jkf32
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    command: >
+      sh -c "alembic upgrade head &&
+             python -m app.main"
+
+volumes:
+  postgres_data: 
